@@ -2,19 +2,22 @@ package main
 
 import (
 	"flag"
+	"log"
+	"strings"
 	"git.192k.pw/bake/telegobot/botcommands"
 	"git.192k.pw/bake/telegobot/telegram"
-	"log"
 )
 
 type Command interface {
 	Pattern() string
-	Run(string, telegram.Message, func(string, telegram.Message))
+	Run(string, telegram.Message) string
 }
 
-func main() {
-	token := flag.String("token", "", "Token")
+var (
+	token = flag.String("token", "", "Token")
+)
 
+func main() {
 	flag.Parse()
 
 	telegram.Token = *token
@@ -46,7 +49,7 @@ func loop() {
 					break
 				}
 
-				go command.Run(result.Message.Text[len(command.Pattern())+1:], result.Message, processMessage)
+				go runCommand(command, result.Message.Text[len(command.Pattern()):], result.Message)
 			}
 		}
 
@@ -56,8 +59,8 @@ func loop() {
 	}
 }
 
-func processMessage(text string, message telegram.Message) {
-	log.Println(message.Chat.Username + " drank " + text)
+func runCommand(command Command, arg string, message telegram.Message) {
+	text := command.Run(strings.Trim(arg, " "), message)
 
 	telegram.SendMessage(message.Chat.ID, text)
 }

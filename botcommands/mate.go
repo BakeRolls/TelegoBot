@@ -10,6 +10,6 @@ func (*Mate) Pattern() string {
 	return "/mate"
 }
 
-func (*Mate) Run(arg string, message telegram.Message, callback func(text string, message telegram.Message)) {
-	callback("You drank " + arg + "?", message)
+func (*Mate) Run(arg string, message telegram.Message) string {
+	return "You drank " + arg + "?"
 }
