@@ -9,7 +9,7 @@ import (
 
 type Command interface {
 	Pattern() string
-	Run(string, telegram.Message) string
+	Run(string, telegram.Message, func(string, telegram.Message))
 }
 
 func main() {
@@ -46,11 +46,7 @@ func loop() {
 					break
 				}
 
-				text := command.Run(result.Message.Text[len(command.Pattern())+1:], result.Message)
-
-				log.Println(result.Message.Chat.Username + " drank " + result.Message.Text[len(command.Pattern())+1:])
-
-				telegram.SendMessage(result.Message.Chat.ID, text)
+				go command.Run(result.Message.Text[len(command.Pattern())+1:], result.Message, processMessage)
 			}
 		}
 
@@ -58,4 +54,10 @@ func loop() {
 			offset = res.Results[len(res.Results)-1].ID + 1
 		}
 	}
+}
+
+func processMessage(text string, message telegram.Message) {
+	log.Println(message.Chat.Username + " drank " + text)
+
+	telegram.SendMessage(message.Chat.ID, text)
 }
