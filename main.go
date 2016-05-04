@@ -25,7 +25,7 @@ func main() {
 	c := make(chan telegram.Message)
 	commands := []Command{}
 
-	commands = append(commands, &botcommands.Kity{})
+	//commands = append(commands, &botcommands.Kity{})
 	commands = append(commands, &botcommands.Mate{})
 
 	go telegram.GetUpdatesChannel(c)
@@ -53,6 +53,5 @@ func processMessage(commands []Command, message telegram.Message) {
 		}
 
 		telegram.SendMessage(message.Chat.ID, text)
-		continue
 	}
 }
