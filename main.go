@@ -10,7 +10,7 @@ import (
 
 type Command interface {
 	Pattern() string
-	Run(string, telegram.Message) string
+	Run(string, telegram.Message) (string, error)
 }
 
 var (
@@ -44,7 +44,12 @@ func processMessage(commands []Command, message telegram.Message) {
 			break
 		}
 
-		text := command.Run(strings.Trim(message.Text[len(command.Pattern()):], " "), message)
+		text, err := command.Run(strings.Trim(message.Text[len(command.Pattern()):], " "), message)
+
+		if err != nil {
+			telegram.SendMessage(message.Chat.ID, err.Error())
+			break
+		}
 
 		telegram.SendMessage(message.Chat.ID, text)
 	}
