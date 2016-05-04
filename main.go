@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"strings"
 
 	"git.192k.pw/bake/telegobot/botcommands"
@@ -38,8 +37,6 @@ func main() {
 
 func processMessage(commands []Command, message telegram.Message) {
 	for _, command := range commands {
-		log.Println(command.Pattern(), message.Text)
-
 		if len(message.Text) < len(command.Pattern()) {
 			continue
 		}
