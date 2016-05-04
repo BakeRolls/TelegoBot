@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"log"
 	"strings"
+
 	"git.192k.pw/bake/telegobot/botcommands"
 	"git.192k.pw/bake/telegobot/telegram"
 )
@@ -22,45 +22,30 @@ func main() {
 
 	telegram.Token = *token
 
-	loop()
-}
-
-func loop() {
-	offset := 0
+	c := make(chan telegram.Message)
 	commands := []Command{}
 
 	commands = append(commands, &botcommands.Mate{})
 
-	for {
-		res, err := telegram.GetUpdates(offset, 100, 30)
+	go telegram.GetUpdatesChannel(c)
 
-		if err != nil {
-			log.Println(err.Error())
-			return
-		}
-
-		for _, result := range res.Results {
-			for _, command := range commands {
-				if len(result.Message.Text) < len(command.Pattern()) {
-					break
-				}
-
-				if result.Message.Text[:len(command.Pattern())] != command.Pattern() {
-					break
-				}
-
-				go runCommand(command, result.Message.Text[len(command.Pattern()):], result.Message)
-			}
-		}
-
-		if len(res.Results) > 0 {
-			offset = res.Results[len(res.Results)-1].ID + 1
-		}
+	for message := range c {
+		go processMessage(commands, message)
 	}
 }
 
-func runCommand(command Command, arg string, message telegram.Message) {
-	text := command.Run(strings.Trim(arg, " "), message)
+func processMessage(commands []Command, message telegram.Message) {
+	for _, command := range commands {
+		if len(message.Text) < len(command.Pattern()) {
+			break
+		}
 
-	telegram.SendMessage(message.Chat.ID, text)
+		if message.Text[:len(command.Pattern())] != command.Pattern() {
+			break
+		}
+
+		text := command.Run(strings.Trim(message.Text[len(command.Pattern()):], " "), message)
+
+		telegram.SendMessage(message.Chat.ID, text)
+	}
 }

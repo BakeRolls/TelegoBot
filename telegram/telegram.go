@@ -41,6 +41,24 @@ func GetUpdates(offset int, limit int, timeout int) (Response, error) {
 	return res, nil
 }
 
+func GetUpdatesChannel(c chan Message) error {
+	offset := 0
+
+	for {
+		res, err := GetUpdates(offset, 100, 30)
+
+		if err != nil {
+			return err
+		}
+
+		for _, result := range res.Results {
+			c <- result.Message
+
+			offset = result.ID + 1
+		}
+	}
+}
+
 func SendMessage(chat int, text string) error {
 	params := map[string]string{
 		"chat_id": strconv.Itoa(chat),
