@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"strings"
 
 	"git.192k.pw/bake/telegobot/botcommands"
@@ -25,6 +26,7 @@ func main() {
 	c := make(chan telegram.Message)
 	commands := []Command{}
 
+	commands = append(commands, &botcommands.Kity{})
 	commands = append(commands, &botcommands.Mate{})
 
 	go telegram.GetUpdatesChannel(c)
@@ -36,21 +38,24 @@ func main() {
 
 func processMessage(commands []Command, message telegram.Message) {
 	for _, command := range commands {
+		log.Println(command.Pattern(), message.Text)
+
 		if len(message.Text) < len(command.Pattern()) {
-			break
+			continue
 		}
 
 		if message.Text[:len(command.Pattern())] != command.Pattern() {
-			break
+			continue
 		}
 
 		text, err := command.Run(strings.Trim(message.Text[len(command.Pattern()):], " "), message)
 
 		if err != nil {
 			telegram.SendMessage(message.Chat.ID, err.Error())
-			break
+			continue
 		}
 
 		telegram.SendMessage(message.Chat.ID, text)
+		continue
 	}
 }

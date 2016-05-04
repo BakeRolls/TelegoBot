@@ -9,12 +9,20 @@ import (
 )
 
 var (
-	Limit   = 100
+	// Limit limits the number of updates to be retrieved
+	Limit = 100
+
+	// Timeout in seconds for long polling.
 	Timeout = 5
-	Base    = "https://api.telegram.org/bot"
-	Token   = ""
+
+	// Base of Telegrams API
+	Base = "https://api.telegram.org/bot"
+
+	// Token of your bot
+	Token = ""
 )
 
+// GetUpdates waits until there is at least one new message
 func GetUpdates(offset int, limit int, timeout int) (Response, error) {
 	params := map[string]string{
 		"offset":  strconv.Itoa(offset),
@@ -41,6 +49,7 @@ func GetUpdates(offset int, limit int, timeout int) (Response, error) {
 	return res, nil
 }
 
+// GetUpdatesChannel loops over GetUpdates and sends the result Message through a channel
 func GetUpdatesChannel(c chan Message) error {
 	offset := 0
 
@@ -59,6 +68,7 @@ func GetUpdatesChannel(c chan Message) error {
 	}
 }
 
+// SendMessage sends a Telegram-message
 func SendMessage(chat int, text string) error {
 	params := map[string]string{
 		"chat_id": strconv.Itoa(chat),
