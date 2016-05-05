@@ -3,6 +3,7 @@ package telegram
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -42,28 +43,29 @@ func GetUpdates(offset int, limit int, timeout int) (Response, error) {
 		return res, err
 	}
 
-	if len(res.Results) <= 0 {
+	if len(res.Updates) <= 0 {
 		return res, nil
 	}
 
 	return res, nil
 }
 
-// GetUpdatesChannel loops over GetUpdates and sends the result Message through a channel
-func GetUpdatesChannel(c chan Message) error {
+// GetUpdatesChannel loops over GetUpdates and sends the Update through a channel
+func GetUpdatesChannel(c chan Update) error {
 	offset := 0
 
 	for {
 		res, err := GetUpdates(offset, 100, 30)
 
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 
-		for _, result := range res.Results {
-			c <- result.Message
+		for _, update := range res.Updates {
+			c <- update
 
-			offset = result.ID + 1
+			offset = update.ID + 1
 		}
 	}
 }
@@ -76,6 +78,26 @@ func SendMessage(chat int, text string) error {
 	}
 
 	if _, err := get("sendMessage", params); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AnswerInlineQuery answers an InlineQuery
+func AnswerInlineQuery(id string, results []InlineQueryResultPhoto) error {
+	jsonResults, err := json.Marshal(results)
+
+	if err != nil {
+		return err
+	}
+
+	params := map[string]string{
+		"inline_query_id": id,
+		"results":         string(jsonResults),
+	}
+
+	if _, err := get("answerInlineQuery", params); err != nil {
 		return err
 	}
 

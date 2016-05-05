@@ -10,12 +10,12 @@ import (
 type Mate struct{}
 
 // Pattern defines the message-prefix
-func (*Mate) Pattern() string {
+func (m *Mate) Pattern() string {
 	return "/mate"
 }
 
 // Run generates the answer
-func (*Mate) Run(arg string, message telegram.Message) (string, error) {
+func (m *Mate) Run(arg string, message telegram.Message) (string, error) {
 	if len(arg) == 0 {
 		return "", errors.New("What did you drink?")
 	}

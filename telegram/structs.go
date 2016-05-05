@@ -2,12 +2,13 @@ package telegram
 
 type Response struct {
 	OK      bool     `json:"ok"`
-	Results []Result `json:"result"`
+	Updates []Update `json:"result"`
 }
 
-type Result struct {
-	ID      int     `json:"update_id"`
-	Message Message `json:"message"`
+type Update struct {
+	ID          int         `json:"update_id"`
+	Message     Message     `json:"message"`
+	InlineQuery InlineQuery `json:"inline_query"`
 }
 
 type Message struct {
@@ -30,4 +31,24 @@ type Entity struct {
 	Offset int    `json:"offset"`
 	Length int    `json:"length"`
 	Type   string `json:"type"`
+}
+
+type InlineQuery struct {
+	ID       string   `json:"id"`
+	From     User     `json:"from"`
+	Location Location `json:"location"`
+	Query    string   `json:""`
+	Offset   string   `json:"offset"`
+}
+
+type InlineQueryResultPhoto struct {
+	Type  string `json:"type"`
+	ID    string `json:"id"`
+	Photo string `json:"photo_url"`
+	Thumb string `json:"thumb_url"`
+}
+
+type Location struct {
+	longitude float32 `json:"longitude"`
+	latitude  float32 `json:"latitude"`
 }

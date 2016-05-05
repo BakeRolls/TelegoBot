@@ -20,12 +20,12 @@ const (
 type Kity struct{}
 
 // Pattern defines the message-prefix
-func (*Kity) Pattern() string {
+func (k *Kity) Pattern() string {
 	return "/kity"
 }
 
 // Run creates a file in base called 2006-01-02-slug.md
-func (*Kity) Run(arg string, message telegram.Message) (string, error) {
+func (k *Kity) Run(arg string, message telegram.Message) (string, error) {
 	if len(arg) == 0 {
 		return "", errors.New(help)
 	}
