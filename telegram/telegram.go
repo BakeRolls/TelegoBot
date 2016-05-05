@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -22,33 +23,6 @@ var (
 	Token = ""
 )
 
-// GetUpdates waits until there is at least one new message
-func GetUpdates(offset int, limit int, timeout int) (Response, error) {
-	params := map[string]string{
-		"offset":  strconv.Itoa(offset),
-		"limit":   strconv.Itoa(limit),
-		"timeout": strconv.Itoa(timeout),
-	}
-
-	body, err := get("getUpdates", params)
-
-	if err != nil {
-		return Response{}, err
-	}
-
-	res, err := parse(body)
-
-	if err != nil {
-		return res, err
-	}
-
-	if len(res.Updates) <= 0 {
-		return res, nil
-	}
-
-	return res, nil
-}
-
 // GetUpdatesChannel loops over GetUpdates and sends the Update through a channel
 func GetUpdatesChannel(c chan Update) error {
 	offset := 0
@@ -66,6 +40,167 @@ func GetUpdatesChannel(c chan Update) error {
 			offset = update.ID + 1
 		}
 	}
+}
+
+// GetUpdates waits until there is at least one new message
+func GetUpdates(offset int, limit int, timeout int) (Response, error) {
+	response := Response{}
+	res, err := get("getUpdates", map[string]string{
+		"offset":  strconv.Itoa(offset),
+		"limit":   strconv.Itoa(limit),
+		"timeout": strconv.Itoa(timeout),
+	})
+
+	if err != nil {
+		return response, err
+	}
+
+	if err := json.Unmarshal(res, &response); err != nil {
+		return response, err
+	}
+
+	return response, nil
+}
+
+func GetMe() (User, error) {
+	user := User{}
+	res, err := get("getMe", map[string]string{})
+
+	if err != nil {
+		return user, err
+	}
+
+	if err := json.Unmarshal(res, &user); err != nil {
+		return user, err
+	}
+
+	return user, nil
+}
+
+func ForwardMessage(chat string, fromChat string, disableNotification bool, messageID int) (Message, error) {
+	message := Message{}
+	res, err := get("forwardMessage", map[string]string{
+		"chat_id":              chat,
+		"action":               fromChat,
+		"disable_notification": strconv.FormatBool(disableNotification),
+		"message_id":           strconv.Itoa(messageID),
+	})
+
+	if err != nil {
+		return message, err
+	}
+
+	if err := json.Unmarshal(res, &message); err != nil {
+		return message, err
+	}
+
+	return message, nil
+}
+
+func GetUserProfilePhotos(user int, offset int, limit int) (UserProfilePhotos, error) {
+	photos := UserProfilePhotos{}
+	res, err := get("getUserProfilePhotos", map[string]string{
+		"user_id": strconv.Itoa(user),
+		"offset":  strconv.Itoa(offset),
+		"limit":   strconv.Itoa(limit),
+	})
+
+	if err != nil {
+		return photos, err
+	}
+
+	if err := json.Unmarshal(res, &photos); err != nil {
+		return photos, err
+	}
+
+	return photos, nil
+}
+
+func GetFile(id string) (File, error) {
+	file := File{}
+	res, err := get("getFile", map[string]string{
+		"file_id": id,
+	})
+
+	if err != nil {
+		return file, err
+	}
+
+	if err := json.Unmarshal(res, &file); err != nil {
+		return file, err
+	}
+
+	return file, nil
+}
+
+func KickChatMember(chat string, user int) error {
+	res, err := get("kickChatMember", map[string]string{
+		"chat_id": chat,
+		"user_id": strconv.Itoa(user),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	success, err := strconv.ParseBool(string(res))
+
+	if err != nil {
+		return err
+	}
+
+	if !success {
+		return errors.New(strconv.FormatBool(success))
+	}
+
+	return nil
+}
+
+func UnbanChatMember(chat string, user int) error {
+	res, err := get("unbanChatMember", map[string]string{
+		"chat_id": chat,
+		"user_id": strconv.Itoa(user),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	success, err := strconv.ParseBool(string(res))
+
+	if err != nil {
+		return err
+	}
+
+	if !success {
+		return errors.New(strconv.FormatBool(success))
+	}
+
+	return nil
+}
+
+func AnswerCallbackQuery(id string, text string, alert bool) error {
+	res, err := get("answerCallbackQuery", map[string]string{
+		"file_id":    id,
+		"text":       text,
+		"show_alert": strconv.FormatBool(alert),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	success, err := strconv.ParseBool(string(res))
+
+	if err != nil {
+		return err
+	}
+
+	if !success {
+		return errors.New(strconv.FormatBool(success))
+	}
+
+	return nil
 }
 
 // SendMessage sends a Telegram-message
@@ -124,16 +259,4 @@ func get(method string, params map[string]string) ([]byte, error) {
 	}
 
 	return body, nil
-}
-
-func parse(body []byte) (Response, error) {
-	res := Response{}
-
-	err := json.Unmarshal(body, &res)
-
-	if err != nil {
-		return res, err
-	}
-
-	return res, nil
 }
