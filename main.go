@@ -2,9 +2,8 @@ package main
 
 import (
 	"flag"
-	"strings"
-
 	"strconv"
+	"strings"
 
 	"git.192k.pw/bake/telegobot/botcommands"
 	"git.192k.pw/bake/telegobot/telegram"

@@ -3,7 +3,6 @@ package telegram
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -58,7 +57,6 @@ func GetUpdatesChannel(c chan Update) error {
 		res, err := GetUpdates(offset, 100, 30)
 
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 
