@@ -1,51 +1,62 @@
-package telegram
+package telegobot
 
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
 )
 
-var (
-	// Limit limits the number of updates to be retrieved
-	Limit = 100
+type TelegoBot struct {
+	Token    string
+	Limit    int
+	Timeout  int
+	Base     string
+	Test     chan string
+	Messages chan Message
+	Queries  chan InlineQuery
+}
 
-	// Timeout in seconds for long polling.
-	Timeout = 5
+// NewBot builds a new bot with specific token
+func NewBot(token string) *TelegoBot {
+	return &TelegoBot{
+		Token:   token,
+		Limit:   100,
+		Timeout: 30,
+		Base:    "https://api.telegram.org/bot",
+	}
+}
 
-	// Base of Telegrams API
-	Base = "https://api.telegram.org/bot"
-
-	// Token of your bot
-	Token = ""
-)
-
-// GetUpdatesChannel loops over GetUpdates and sends the Update through a channel
-func GetUpdatesChannel(c chan Update) error {
+// GetUpdates loops over getUpdates and sends the Update through a channel
+func (t *TelegoBot) GetUpdates() {
 	offset := 0
 
 	for {
-		res, err := GetUpdates(offset, 100, 30)
+		res, err := t.getUpdates(offset, t.Limit, t.Timeout)
 
 		if err != nil {
-			return err
+			fmt.Println(err)
 		}
 
 		for _, update := range res.Updates {
-			c <- update
+			if t.Messages != nil && update.Message.ID > 0 {
+				t.Messages <- update.Message
+			} else if t.Queries != nil && update.InlineQuery.ID != "" {
+				t.Queries <- update.InlineQuery
+			}
 
 			offset = update.ID + 1
 		}
 	}
 }
 
-// GetUpdates waits until there is at least one new message
-func GetUpdates(offset int, limit int, timeout int) (Response, error) {
+// getUpdates waits until there is at least one new message
+func (t *TelegoBot) getUpdates(offset int, limit int, timeout int) (Response, error) {
 	response := Response{}
-	res, err := get("getUpdates", map[string]string{
+	res, err := t.get("getUpdates", map[string]string{
 		"offset":  strconv.Itoa(offset),
 		"limit":   strconv.Itoa(limit),
 		"timeout": strconv.Itoa(timeout),
@@ -62,9 +73,9 @@ func GetUpdates(offset int, limit int, timeout int) (Response, error) {
 	return response, nil
 }
 
-func GetMe() (User, error) {
+func (t *TelegoBot) GetMe() (User, error) {
 	user := User{}
-	res, err := get("getMe", map[string]string{})
+	res, err := t.get("getMe", map[string]string{})
 
 	if err != nil {
 		return user, err
@@ -77,9 +88,9 @@ func GetMe() (User, error) {
 	return user, nil
 }
 
-func ForwardMessage(chat string, fromChat string, disableNotification bool, messageID int) (Message, error) {
+func (t *TelegoBot) ForwardMessage(chat string, fromChat string, disableNotification bool, messageID int) (Message, error) {
 	message := Message{}
-	res, err := get("forwardMessage", map[string]string{
+	res, err := t.get("forwardMessage", map[string]string{
 		"chat_id":              chat,
 		"action":               fromChat,
 		"disable_notification": strconv.FormatBool(disableNotification),
@@ -97,9 +108,9 @@ func ForwardMessage(chat string, fromChat string, disableNotification bool, mess
 	return message, nil
 }
 
-func GetUserProfilePhotos(user int, offset int, limit int) (UserProfilePhotos, error) {
+func (t *TelegoBot) GetUserProfilePhotos(user int, offset int, limit int) (UserProfilePhotos, error) {
 	photos := UserProfilePhotos{}
-	res, err := get("getUserProfilePhotos", map[string]string{
+	res, err := t.get("getUserProfilePhotos", map[string]string{
 		"user_id": strconv.Itoa(user),
 		"offset":  strconv.Itoa(offset),
 		"limit":   strconv.Itoa(limit),
@@ -116,9 +127,9 @@ func GetUserProfilePhotos(user int, offset int, limit int) (UserProfilePhotos, e
 	return photos, nil
 }
 
-func GetFile(id string) (File, error) {
+func (t *TelegoBot) GetFile(id string) (File, error) {
 	file := File{}
-	res, err := get("getFile", map[string]string{
+	res, err := t.get("getFile", map[string]string{
 		"file_id": id,
 	})
 
@@ -133,8 +144,8 @@ func GetFile(id string) (File, error) {
 	return file, nil
 }
 
-func KickChatMember(chat string, user int) error {
-	res, err := get("kickChatMember", map[string]string{
+func (t *TelegoBot) KickChatMember(chat string, user int) error {
+	res, err := t.get("kickChatMember", map[string]string{
 		"chat_id": chat,
 		"user_id": strconv.Itoa(user),
 	})
@@ -156,8 +167,8 @@ func KickChatMember(chat string, user int) error {
 	return nil
 }
 
-func UnbanChatMember(chat string, user int) error {
-	res, err := get("unbanChatMember", map[string]string{
+func (t *TelegoBot) UnbanChatMember(chat string, user int) error {
+	res, err := t.get("unbanChatMember", map[string]string{
 		"chat_id": chat,
 		"user_id": strconv.Itoa(user),
 	})
@@ -179,8 +190,8 @@ func UnbanChatMember(chat string, user int) error {
 	return nil
 }
 
-func AnswerCallbackQuery(id string, text string, alert bool) error {
-	res, err := get("answerCallbackQuery", map[string]string{
+func (t *TelegoBot) AnswerCallbackQuery(id string, text string, alert bool) error {
+	res, err := t.get("answerCallbackQuery", map[string]string{
 		"file_id":    id,
 		"text":       text,
 		"show_alert": strconv.FormatBool(alert),
@@ -204,13 +215,13 @@ func AnswerCallbackQuery(id string, text string, alert bool) error {
 }
 
 // SendMessage sends a Telegram-message
-func SendMessage(chat int, text string) error {
+func (t *TelegoBot) SendMessage(chat int, text string) error {
 	params := map[string]string{
 		"chat_id": strconv.Itoa(chat),
 		"text":    text,
 	}
 
-	if _, err := get("sendMessage", params); err != nil {
+	if _, err := t.get("sendMessage", params); err != nil {
 		return err
 	}
 
@@ -218,7 +229,7 @@ func SendMessage(chat int, text string) error {
 }
 
 // AnswerInlineQuery answers an InlineQuery
-func AnswerInlineQuery(id string, results []InlineQueryResultPhoto) error {
+func (t *TelegoBot) AnswerInlineQuery(id string, results []InlineQueryResultPhoto) error {
 	jsonResults, err := json.Marshal(results)
 
 	if err != nil {
@@ -230,21 +241,21 @@ func AnswerInlineQuery(id string, results []InlineQueryResultPhoto) error {
 		"results":         string(jsonResults),
 	}
 
-	if _, err := get("answerInlineQuery", params); err != nil {
+	if _, err := t.get("answerInlineQuery", params); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func get(method string, params map[string]string) ([]byte, error) {
+func (t *TelegoBot) get(method string, params map[string]string) ([]byte, error) {
 	vals := url.Values{}
 
 	for key, val := range params {
 		vals.Add(key, val)
 	}
 
-	res, err := http.Get(Base + Token + "/" + method + "?" + vals.Encode())
+	res, err := http.Get(fmt.Sprintf("%s%s/%s?%s", t.Base, t.Token, method, vals.Encode()))
 
 	if err != nil {
 		return nil, err

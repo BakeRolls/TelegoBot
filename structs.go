@@ -1,4 +1,4 @@
-package telegram
+package telegobot
 
 type User struct {
 	ID        int    `json:"id"`
