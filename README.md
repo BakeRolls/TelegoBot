@@ -2,7 +2,7 @@
 
 Telegram bot using long polling written in Go.
 
-The bots not complete yet, since the most `send-` and `update`methods aren't implemented.
+The bots not complete yet, since the most `send-` and `update`methods aren't implemented (`SendMessage` and `AnswerInlineQuery` are).
 
 # Example
 
