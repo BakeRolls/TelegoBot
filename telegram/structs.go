@@ -42,10 +42,12 @@ type InlineQuery struct {
 }
 
 type InlineQueryResultPhoto struct {
-	Type  string `json:"type"`
-	ID    string `json:"id"`
-	Photo string `json:"photo_url"`
-	Thumb string `json:"thumb_url"`
+	Type   string `json:"type"`
+	ID     string `json:"id"`
+	Photo  string `json:"photo_url"`
+	Thumb  string `json:"thumb_url"`
+	Width  int    `json:"photo_width"`
+	Height int    `json:"photo_height"`
 }
 
 type Location struct {

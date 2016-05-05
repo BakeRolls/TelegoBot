@@ -75,10 +75,12 @@ func processInlineQuery(inlineQuery telegram.InlineQuery) error {
 
 	for i, post := range posts {
 		photos = append(photos, telegram.InlineQueryResultPhoto{
-			Type:  "photo",
-			ID:    strconv.Itoa(i),
-			Photo: post.High,
-			Thumb: post.Low,
+			Type:   "photo",
+			ID:     strconv.Itoa(i),
+			Photo:  post.High,
+			Thumb:  post.Low,
+			Width:  post.Width,
+			Height: post.Height,
 		})
 	}
 
