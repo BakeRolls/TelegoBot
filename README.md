@@ -6,7 +6,7 @@ The bots not complete yet, since the most `send-` and `update`methods aren't imp
 
 # Example
 
-```
+```go
 package main
 
 import (
@@ -51,10 +51,11 @@ func queries() {
 }
 ```
 
-```
+```shell
 $ go run example.go --token 123456789:ABC...
 Message: Hello World!
 Query: Ha
 Query: Har
 Query: Harvey
+Message: @yourbot Harvey
 ```
