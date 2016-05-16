@@ -41,12 +41,30 @@ func main() {
 func messages() {
 	for message := range bot.Messages {
 		fmt.Println("Message: " + message.Text)
+
+		bot.SendMessage(message.Chat.ID, "Echo " + message.Text)
 	}
 }
 
 func queries() {
 	for query := range bot.Queries {
 		fmt.Println("Query: " + query.Query)
+
+		posts, _ := tumblr.Query(query.Query)
+		photos := []telegobot.InlineQueryResultPhoto{}
+
+		for i, post := range posts {
+			photos = append(photos, telegobot.InlineQueryResultPhoto{
+				Type:   "photo",
+				ID:     strconv.Itoa(i),
+				Photo:  post.High,
+				Thumb:  post.Low,
+				Width:  post.Width,
+				Height: post.Height,
+			})
+		}
+
+		bot.AnswerInlineQuery(query.ID, photos)
 	}
 }
 ```
