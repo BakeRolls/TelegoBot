@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 type TelegoBot struct {
@@ -36,9 +37,10 @@ func (t *TelegoBot) GetUpdates() {
 
 	for {
 		res, err := t.getUpdates(offset, t.Limit, t.Timeout)
-
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("telegram: %s\n", err)
+			time.Sleep(time.Second)
+			continue
 		}
 
 		for _, update := range res.Updates {
@@ -54,33 +56,35 @@ func (t *TelegoBot) GetUpdates() {
 }
 
 // getUpdates waits until there is at least one new message
-func (t *TelegoBot) getUpdates(offset int, limit int, timeout int) (Response, error) {
-	response := Response{}
+func (t *TelegoBot) getUpdates(offset int, limit int, timeout int) (*Response, *Error) {
 	res, err := t.get("getUpdates", map[string]string{
 		"offset":  strconv.Itoa(offset),
 		"limit":   strconv.Itoa(limit),
 		"timeout": strconv.Itoa(timeout),
 	})
-
 	if err != nil {
-		return response, err
+		return nil, &Error{false, 400, err.Error()}
 	}
 
-	if err := json.Unmarshal(res, &response); err != nil {
-		return response, err
+	rerr := &Error{}
+	if err = json.Unmarshal(res, rerr); err == nil && rerr.Code > 0 {
+		return nil, rerr
 	}
 
-	return response, nil
+	response := &Response{}
+	if err = json.Unmarshal(res, response); err == nil {
+		return response, nil
+	}
+
+	return nil, &Error{false, 400, "could not get updates"}
 }
 
 func (t *TelegoBot) GetMe() (User, error) {
 	user := User{}
 	res, err := t.get("getMe", map[string]string{})
-
 	if err != nil {
 		return user, err
 	}
-
 	if err := json.Unmarshal(res, &user); err != nil {
 		return user, err
 	}
@@ -96,11 +100,9 @@ func (t *TelegoBot) ForwardMessage(chat string, fromChat string, disableNotifica
 		"disable_notification": strconv.FormatBool(disableNotification),
 		"message_id":           strconv.Itoa(messageID),
 	})
-
 	if err != nil {
 		return message, err
 	}
-
 	if err := json.Unmarshal(res, &message); err != nil {
 		return message, err
 	}
@@ -115,11 +117,9 @@ func (t *TelegoBot) GetUserProfilePhotos(user int, offset int, limit int) (UserP
 		"offset":  strconv.Itoa(offset),
 		"limit":   strconv.Itoa(limit),
 	})
-
 	if err != nil {
 		return photos, err
 	}
-
 	if err := json.Unmarshal(res, &photos); err != nil {
 		return photos, err
 	}
@@ -132,11 +132,9 @@ func (t *TelegoBot) GetFile(id string) (File, error) {
 	res, err := t.get("getFile", map[string]string{
 		"file_id": id,
 	})
-
 	if err != nil {
 		return file, err
 	}
-
 	if err := json.Unmarshal(res, &file); err != nil {
 		return file, err
 	}
@@ -149,17 +147,14 @@ func (t *TelegoBot) KickChatMember(chat string, user int) error {
 		"chat_id": chat,
 		"user_id": strconv.Itoa(user),
 	})
-
 	if err != nil {
 		return err
 	}
 
 	success, err := strconv.ParseBool(string(res))
-
 	if err != nil {
 		return err
 	}
-
 	if !success {
 		return errors.New(strconv.FormatBool(success))
 	}
@@ -172,17 +167,14 @@ func (t *TelegoBot) UnbanChatMember(chat string, user int) error {
 		"chat_id": chat,
 		"user_id": strconv.Itoa(user),
 	})
-
 	if err != nil {
 		return err
 	}
 
 	success, err := strconv.ParseBool(string(res))
-
 	if err != nil {
 		return err
 	}
-
 	if !success {
 		return errors.New(strconv.FormatBool(success))
 	}
@@ -196,17 +188,14 @@ func (t *TelegoBot) AnswerCallbackQuery(id string, text string, alert bool) erro
 		"text":       text,
 		"show_alert": strconv.FormatBool(alert),
 	})
-
 	if err != nil {
 		return err
 	}
 
 	success, err := strconv.ParseBool(string(res))
-
 	if err != nil {
 		return err
 	}
-
 	if !success {
 		return errors.New(strconv.FormatBool(success))
 	}
@@ -220,7 +209,6 @@ func (t *TelegoBot) SendMessage(chat int, text string) error {
 		"chat_id": strconv.Itoa(chat),
 		"text":    text,
 	}
-
 	if _, err := t.get("sendMessage", params); err != nil {
 		return err
 	}
@@ -231,7 +219,6 @@ func (t *TelegoBot) SendMessage(chat int, text string) error {
 // AnswerInlineQuery answers an InlineQuery
 func (t *TelegoBot) AnswerInlineQuery(id string, results []InlineQueryResultPhoto) error {
 	jsonResults, err := json.Marshal(results)
-
 	if err != nil {
 		return err
 	}
@@ -240,7 +227,6 @@ func (t *TelegoBot) AnswerInlineQuery(id string, results []InlineQueryResultPhot
 		"inline_query_id": id,
 		"results":         string(jsonResults),
 	}
-
 	if _, err := t.get("answerInlineQuery", params); err != nil {
 		return err
 	}
@@ -250,21 +236,18 @@ func (t *TelegoBot) AnswerInlineQuery(id string, results []InlineQueryResultPhot
 
 func (t *TelegoBot) get(method string, params map[string]string) ([]byte, error) {
 	vals := url.Values{}
-
 	for key, val := range params {
 		vals.Add(key, val)
 	}
 
-	res, err := http.Get(fmt.Sprintf("%s%s/%s?%s", t.Base, t.Token, method, vals.Encode()))
-
+	client := http.Client{Timeout: time.Duration(t.Timeout) * time.Second}
+	res, err := client.Get(fmt.Sprintf("%s%s/%s?%s", t.Base, t.Token, method, vals.Encode()))
 	if err != nil {
 		return nil, err
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
-
 	defer res.Body.Close()
-
 	if err != nil {
 		return nil, err
 	}

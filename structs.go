@@ -1,5 +1,19 @@
 package telegobot
 
+import (
+	"fmt"
+)
+
+type Error struct {
+	OK          bool   `json:"ok"`
+	Code        int    `json:"error_code"`
+	Description string `json:"description"`
+}
+
+func (e *Error) Error() string {
+	return fmt.Sprintf("%d: %s", e.Code, e.Description)
+}
+
 type User struct {
 	ID        int    `json:"id"`
 	Username  string `json:"username"`
